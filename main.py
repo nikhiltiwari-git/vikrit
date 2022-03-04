@@ -1,14 +1,11 @@
 from smartapi import SmartConnect
 import pandas as pd
-import numpy as np
 
 from datetime import datetime, timedelta
 from time import time, sleep
 from talib.abstract import *
 
 import credentials
-import placeorder
-
 import requests
 import threading
 import warnings
@@ -17,9 +14,33 @@ warnings.filterwarnings('ignore')
 pd.options.mode.chained_assignment = None
 
 
-SYMBOL_LIST = ['RELIANCE']
+SYMBOL_LIST = ['TATAPOWER']
 TRADED_SYMBOL = []
 timeFrame = 60 + 5 
+
+
+
+def place_order(token,symbol,qty,buy_sell,ordertype,price,variety= 'NORMAL',exch_seg='NSE',triggerprice=0):
+    try:
+        orderparams = {
+            "variety": variety,
+            "tradingsymbol": symbol,
+            "symboltoken": token,
+            "transactiontype": buy_sell,
+            "exchange": exch_seg,
+            "ordertype": ordertype,
+            "producttype": "INTRADAY",
+            "duration": "DAY",
+            "price": price,
+            "squareoff": "0",
+            "stoploss": "0",
+            "quantity": qty,
+            "triggerprice":triggerprice
+            }
+        orderId=credentials.SMART_API_OBJ.placeOrder(orderparams)
+        print("The order id is: {}".format(orderId))
+    except Exception as e:
+        print("Order placement failed: {}".format(e.message))
 
 
 
@@ -32,6 +53,7 @@ def intializeSymbolTokenMap():
     token_df = token_df.astype({'strike': float})
     credentials.TOKEN_MAP = token_df
 
+
 def getTokenInfo (symbol, exch_seg ='NSE',instrumenttype='OPTIDX',strike_price = '',pe_ce = 'CE'):
     df = credentials.TOKEN_MAP
     strike_price = strike_price*100
@@ -42,6 +64,7 @@ def getTokenInfo (symbol, exch_seg ='NSE',instrumenttype='OPTIDX',strike_price =
         return df[(df['exch_seg'] == 'NFO') & (df['instrumenttype'] == instrumenttype) & (df['name'] == symbol)].sort_values(by=['expiry'])
     elif exch_seg == 'NFO' and (instrumenttype == 'OPTSTK' or instrumenttype == 'OPTIDX'):
         return df[(df['exch_seg'] == 'NFO') & (df['instrumenttype'] == instrumenttype) & (df['name'] == symbol) & (df['strike'] == strike_price) & (df['symbol'].str.endswith(pe_ce))].sort_values(by=['expiry'])
+
 
 def calculate_inidcator(res_json):
     columns = ['timestamp','O','H','L','C','V']
@@ -64,6 +87,7 @@ def calculate_inidcator(res_json):
     print(df.tail(10))
     return df
 
+
 def getHistoricalAPI(token,interval= 'ONE_MINUTE'):
     to_date= datetime.now()
     from_date = to_date - timedelta(days=5)
@@ -82,6 +106,7 @@ def getHistoricalAPI(token,interval= 'ONE_MINUTE'):
     except Exception as e:
         print("Historic Api failed: {}".format(e.message))
 
+
 def checkSingnal():
     start = time()
     global TRADED_SYMBOL
@@ -98,13 +123,13 @@ def checkSingnal():
                 if latest_candel['CROSS_UP'] == 1 and latest_candel['RSI_UP'] ==1:
                    
                     ltp = latest_candel['C']
-                    SL = ltp -  2*latest_candel['ATR']
-                    target = ltp + 10*latest_candel['ATR']
-                    qty = 1   #qunatity to trade
+                    SL = ltp -  1*latest_candel['ATR']
+                    target = ltp + 4*latest_candel['ATR']
+                    qty = 1   
                     
-                    res1= place_order(token,symbol,qty,'BUY','MARKET',0) #buy order
-                    res2 = place_order(token,symbol,qty,'SELL','STOPLOSS_MARKET',0,variety='STOPLOSS',triggerprice= SL) #SL order
-                    res3 = place_order(token,symbol,qty,'SELL','LIMIT',target) #taget order
+                    res1= place_order(token,symbol,qty,'BUY','MARKET',0) 
+                    res2 = place_order(token,symbol,qty,'SELL','STOPLOSS_MARKET',0,variety='STOPLOSS',triggerprice= SL) 
+                    res3 = place_order(token,symbol,qty,'SELL','LIMIT',target) 
                     print(res1, res2 , res3)
                     print(f'Order Placed for {symbol} SL {SL}  TGT {target} QTY {qty} at {datetime.now()}')
                     TRADED_SYMBOL.append(symbol)
@@ -125,8 +150,10 @@ if __name__ == '__main__':
    
     interval = timeFrame - datetime.now().second
     
-    print(f"Code run after {interval} sec")
+    print(f" New Candle is forming waiting time {interval} sec ")
     sleep(interval)
     checkSingnal()
+    
 
    
+             
