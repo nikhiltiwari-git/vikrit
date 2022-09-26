@@ -1,5 +1,5 @@
 # <h1 align="center">Vikrit</h1>
- <h3 align="center">Automated bot to trade in equity and derivatives</h3>
+ <h3 align="center">Automated bot to trade in Equity scrips</h3>
 
 Requriments
 - [Pandas](https://pandas.pydata.org/docs/getting_started/install.html)
